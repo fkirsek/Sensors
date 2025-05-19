@@ -39,11 +39,13 @@ class ViewController: UIViewController {
         square.autoCenterInSuperview()
         square.backgroundColor = .blue
         square.autoSetDimensions(to: CGSize(width: 50, height: 50))
+        square.isHidden = true
 
         circle.autoCenterInSuperview()
         circle.autoSetDimensions(to: CGSize(width: 50, height: 50))
         circle.backgroundColor = .red
         circle.layer.cornerRadius = 25
+        circle.isHidden = true
     }
 
     private func drawGraph() {
@@ -97,6 +99,5 @@ class ViewController: UIViewController {
             self.drawGraph()
         }).disposed(by: disposeBag)
     }
-
 }
 

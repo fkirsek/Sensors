@@ -9,6 +9,7 @@ import Foundation
 import RxSwift
 import ARKit
 import CoreMotion
+import os
 
 class ViewModel {
     let showSquareTimer: Observable<Bool>
@@ -25,6 +26,8 @@ class ViewModel {
     private let dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
     private let timestampFormatter = DateFormatter()
 
+    let logger = Logger()
+
     init() {
         // MARK: Base timers
 
@@ -36,24 +39,23 @@ class ViewModel {
         showSquareTimer = baseTimer.map { timePassed in
             timePassed % 20 != 9
         }.distinctUntilChanged()
-        .do(onNext: { [timestampFormatter] isHidden in
+        .do(onNext: { [logger, timestampFormatter] isHidden in
             // log the event
-            print("\(timestampFormatter.string(from: Date())): Square is hidden: \(isHidden)")
+            logger.info("\(timestampFormatter.string(from: Date())): Square is hidden: \(isHidden)")
         })
 
         showCircleTimer = baseTimer.map { timePassed in
             timePassed % 20 != 19
         }.distinctUntilChanged()
-        .do(onNext: { [timestampFormatter] isHidden in
+        .do(onNext: { [logger, timestampFormatter] isHidden in
             // log the event
-            print("\(timestampFormatter.string(from: Date())): Circle is hidden: \(isHidden)")
+            logger.info("\(timestampFormatter.string(from: Date())): Circle is hidden: \(isHidden)")
         })
 
         // MARK: AR Face Tracking
 
         let configuration = ARFaceTrackingConfiguration()
-        configuration.maximumNumberOfTrackedFaces = 1
-
+        configuration.isWorldTrackingEnabled = true
         session.run(configuration)
 
         let faceAnchorObservable = baseTimer.map { [session] timePassed -> ARFaceAnchor? in
@@ -64,22 +66,26 @@ class ViewModel {
             }
             return nil
         }.compactMap { $0 }
-        .do(onNext: { [timestampFormatter] faceAnchor in
-            // log the event
-            print("\(timestampFormatter.string(from: Date())): Face detected with transform \(faceAnchor.transform.debugDescription)")
-        })
 
-        currentFaceTransform = faceAnchorObservable.map { $0.transform }
+        currentFaceTransform = faceAnchorObservable
+            .map { $0.transform }
+            .distinctUntilChanged()
+            .do(onNext: { [logger, timestampFormatter] transform in
+                // log the event
+                logger.info("\(timestampFormatter.string(from: Date())): Face detected with transform \(transform.debugDescription)")
+            })
+
 
         // MARK: CoreMotion
 
         motionManager.accelerometerUpdateInterval = updateInterval
-        motionManager.startAccelerometerUpdates(to: .main) { [weak self, timestampFormatter] data, error in
+        motionManager.startAccelerometerUpdates(to: .main) { [weak self, logger, timestampFormatter] data, error in
             guard error == nil,
+                  let self = self,
                     let data = data else
             { return }
-            print("\(timestampFormatter.string(from: Date())): Accelerometer update")
-            self?.accelerationRelay.onNext(data.acceleration) // wrap accelerometer updates in rx
+            logger.info("\(timestampFormatter.string(from: Date())): Accelerometer update")
+            self.accelerationRelay.onNext(data.acceleration) // wrap accelerometer updates in rx
         }
     }
 }
