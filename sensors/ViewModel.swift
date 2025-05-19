@@ -12,6 +12,9 @@ import CoreMotion
 import os
 
 class ViewModel {
+    let baseTimerAllInterval = 10 // miliseconds
+    let baseTimerIntervalShapes = 200 // miliseconds
+
     let showSquareTimer: Observable<Bool>
     let showCircleTimer: Observable<Bool>
     let disposeBag = DisposeBag()
@@ -20,8 +23,8 @@ class ViewModel {
     let currentFaceTransform: Observable<simd_float4x4>
 
     let motionManager = CMMotionManager()
-    let accelerationRelay = BehaviorSubject<CMAcceleration?>(value: nil)
-    let updateInterval = 0.05
+    let accelerationObservable: Observable<CMAcceleration>
+    let updateInterval = 0.01 // seconds, float
 
     private let dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
     private let timestampFormatter = DateFormatter()
@@ -30,12 +33,16 @@ class ViewModel {
 
     init() {
         // MARK: Base timers
+        let timerRatio = baseTimerIntervalShapes / baseTimerAllInterval
 
         timestampFormatter.dateFormat = dateFormat
 
-        let baseTimer = Observable<Int>
-            .interval(.milliseconds(200), scheduler: MainScheduler.instance)
-        
+        let baseTimerAll = Observable<Int>
+            .timer(.milliseconds(0) ,period: .milliseconds(baseTimerAllInterval), scheduler: MainScheduler.instance).share()
+
+        let baseTimer = baseTimerAll.filter { $0 % timerRatio != 0 }.map { $0 / timerRatio }
+
+        // TODO: 20, 9, 19 magic numbers
         showSquareTimer = baseTimer.map { timePassed in
             timePassed % 20 != 9
         }.distinctUntilChanged()
@@ -75,17 +82,20 @@ class ViewModel {
                 logger.info("\(timestampFormatter.string(from: Date())): Face detected with transform \(transform.debugDescription)")
             })
 
-
         // MARK: CoreMotion
-
         motionManager.accelerometerUpdateInterval = updateInterval
-        motionManager.startAccelerometerUpdates(to: .main) { [weak self, logger, timestampFormatter] data, error in
-            guard error == nil,
-                  let self = self,
-                    let data = data else
-            { return }
+        motionManager.startAccelerometerUpdates()
+
+        // MotionManager accelerometer has a fidelity of 10 milisecond,
+        // so we will poll the latest data on the same timer to ensure
+        // it is as close as possible to other timed events
+
+        accelerationObservable = baseTimerAll.map { [weak motionManager, logger, timestampFormatter] _ in
+            let data = motionManager?.accelerometerData
+            guard let data = data else { return nil }
+
             logger.info("\(timestampFormatter.string(from: Date())): Accelerometer update")
-            self.accelerationRelay.onNext(data.acceleration) // wrap accelerometer updates in rx
-        }
+            return data.acceleration
+        }.compactMap { $0 }
     }
 }

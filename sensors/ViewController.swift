@@ -15,12 +15,13 @@ class ViewController: UIViewController {
 
     let circle = UIView()
     let square = UIView()
+    let size = 50.0
     let disposeBag = DisposeBag()
     let viewModel = ViewModel()
 
     let graphLayer = CAShapeLayer()
     var points: [CGPoint] = []
-    let timeIntervalXModifier = 100.0
+    let timeIntervalXModifier = 50.0
 
     let appStart = Date()
 
@@ -38,13 +39,13 @@ class ViewController: UIViewController {
 
         square.autoCenterInSuperview()
         square.backgroundColor = .blue
-        square.autoSetDimensions(to: CGSize(width: 50, height: 50))
+        square.autoSetDimensions(to: CGSize(width: size, height: size))
         square.isHidden = true
 
         circle.autoCenterInSuperview()
-        circle.autoSetDimensions(to: CGSize(width: 50, height: 50))
+        circle.autoSetDimensions(to: CGSize(width: size, height: size))
         circle.backgroundColor = .red
-        circle.layer.cornerRadius = 25
+        circle.layer.cornerRadius = size / 2
         circle.isHidden = true
     }
 
@@ -90,13 +91,13 @@ class ViewController: UIViewController {
 
         let height = view.frame.height
 
-        viewModel.accelerationRelay.subscribe(onNext: { [weak self] acceleration in
-            guard let acceleration = acceleration, let self = self else { return }
-
-            let l = (acceleration.x.magnitudeSquared + acceleration.y.magnitudeSquared + acceleration.z.magnitudeSquared).squareRoot()
-            let currentTimestamp = Date().timeIntervalSince(appStart)
-            points.append(CGPoint(x: CGFloat(currentTimestamp) * timeIntervalXModifier , y: l * 100 + height * 0.75))
-            self.drawGraph()
+        viewModel.accelerationObservable
+            .subscribe(onNext: { [weak self] acceleration in
+                guard let self = self else { return }
+                let l = (acceleration.x.magnitudeSquared + acceleration.y.magnitudeSquared + acceleration.z.magnitudeSquared).squareRoot()
+                let currentTimestamp = Date().timeIntervalSince(appStart)
+                points.append(CGPoint(x: CGFloat(currentTimestamp) * timeIntervalXModifier , y: l * 100 + height * 0.75))
+                self.drawGraph()
         }).disposed(by: disposeBag)
     }
 }
