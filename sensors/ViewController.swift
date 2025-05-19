@@ -57,7 +57,6 @@ class ViewController: UIViewController {
         path.move(to: CGPointZero)
         let maxCount = Int(width * 0.5 / (viewModel.updateInterval * timeIntervalXModifier) )
 
-
         //TODO: Clunky, move to ViewModel?
         let graphPointsSlice = points.suffix(maxCount)
         let startInterval = graphPointsSlice.first?.x ?? 0

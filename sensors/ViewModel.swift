@@ -29,7 +29,7 @@ class ViewModel {
     private let dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
     private let timestampFormatter = DateFormatter()
 
-    let logger = Logger()
+    let logger = Logger() // replace with a custom logging class to get the data sent 
 
     init() {
         // MARK: Base timers
@@ -47,7 +47,6 @@ class ViewModel {
             timePassed % 20 != 9
         }.distinctUntilChanged()
         .do(onNext: { [logger, timestampFormatter] isHidden in
-            // log the event
             logger.info("\(timestampFormatter.string(from: Date())): Square is hidden: \(isHidden)")
         })
 
@@ -55,7 +54,6 @@ class ViewModel {
             timePassed % 20 != 19
         }.distinctUntilChanged()
         .do(onNext: { [logger, timestampFormatter] isHidden in
-            // log the event
             logger.info("\(timestampFormatter.string(from: Date())): Circle is hidden: \(isHidden)")
         })
 
@@ -78,11 +76,11 @@ class ViewModel {
             .map { $0.transform }
             .distinctUntilChanged()
             .do(onNext: { [logger, timestampFormatter] transform in
-                // log the event
                 logger.info("\(timestampFormatter.string(from: Date())): Face detected with transform \(transform.debugDescription)")
             })
 
         // MARK: CoreMotion
+
         motionManager.accelerometerUpdateInterval = updateInterval
         motionManager.startAccelerometerUpdates()
 
@@ -90,12 +88,14 @@ class ViewModel {
         // so we will poll the latest data on the same timer to ensure
         // it is as close as possible to other timed events
 
-        accelerationObservable = baseTimerAll.map { [weak motionManager, logger, timestampFormatter] _ in
+        accelerationObservable = baseTimerAll.map { [weak motionManager] _ in
             let data = motionManager?.accelerometerData
             guard let data = data else { return nil }
-
-            logger.info("\(timestampFormatter.string(from: Date())): Accelerometer update")
             return data.acceleration
-        }.compactMap { $0 }
+        }
+        .compactMap { $0 }
+        .do(onNext: { [logger, timestampFormatter] _ in
+            logger.info("\(timestampFormatter.string(from: Date())): Accelerometer update")
+        })
     }
 }
