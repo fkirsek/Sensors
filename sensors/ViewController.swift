@@ -43,6 +43,14 @@ class ViewController: UIViewController {
         viewModel.showCircleTimer
             .bind(to: circle.rx.isHidden)
             .disposed(by: disposeBag)
+
+        viewModel.currentLookAtPoint.subscribe(onNext: { _ in
+
+        }).disposed(by: disposeBag)
+
+        viewModel.accelerationRelay.subscribe(onNext: { _ in
+
+        }).disposed(by: disposeBag)
     }
 
 }
