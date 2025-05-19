@@ -20,6 +20,7 @@ class ViewModel {
 
     let motionManager = CMMotionManager()
     let accelerationRelay = BehaviorSubject<CMAcceleration?>(value: nil)
+    let updateInterval = 0.05
 
     private let dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
     private let timestampFormatter = DateFormatter()
@@ -76,7 +77,7 @@ class ViewModel {
 
         // MARK: CoreMotion
 
-        motionManager.accelerometerUpdateInterval = 0.05
+        motionManager.accelerometerUpdateInterval = updateInterval
         motionManager.startAccelerometerUpdates(to: .main) { [weak self, timestampFormatter] data, error in
             guard error == nil,
                     let data = data else
