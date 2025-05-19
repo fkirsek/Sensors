@@ -71,7 +71,7 @@ class ViewController: UIViewController {
         graphLayer.strokeColor = UIColor.orange.cgColor
         graphLayer.fillColor = UIColor.clear.cgColor
         graphLayer.masksToBounds = true
-
+        
         view.layer.addSublayer(graphLayer)
     }
 
@@ -84,7 +84,7 @@ class ViewController: UIViewController {
             .bind(to: circle.rx.isHidden)
             .disposed(by: disposeBag)
 
-        viewModel.currentLookAtPoint.subscribe(onNext: { _ in  }).disposed(by: disposeBag)
+        viewModel.currentFaceTransform.subscribe(onNext: { _ in  }).disposed(by: disposeBag)
 
         let height = view.frame.height
 

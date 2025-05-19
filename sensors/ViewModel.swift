@@ -16,7 +16,7 @@ class ViewModel {
     let disposeBag = DisposeBag()
 
     let session = ARSession()
-    let currentLookAtPoint: Observable<simd_float3?>
+    let currentFaceTransform: Observable<simd_float4x4>
 
     let motionManager = CMMotionManager()
     let accelerationRelay = BehaviorSubject<CMAcceleration?>(value: nil)
@@ -35,21 +35,18 @@ class ViewModel {
         
         showSquareTimer = baseTimer.map { timePassed in
             timePassed % 20 != 9
-        }.do(onNext: { [timestampFormatter] isHidden in
-            if !isHidden {
-                // log the event
-                print("\(timestampFormatter.string(from: Date())): Square shown")
-
-            }
+        }.distinctUntilChanged()
+        .do(onNext: { [timestampFormatter] isHidden in
+            // log the event
+            print("\(timestampFormatter.string(from: Date())): Square is hidden: \(isHidden)")
         })
 
         showCircleTimer = baseTimer.map { timePassed in
             timePassed % 20 != 19
-        }.do(onNext: { [timestampFormatter] isHidden in
-            if !isHidden {
-                // log the event
-                print("\(timestampFormatter.string(from: Date())): Circle shown")
-            }
+        }.distinctUntilChanged()
+        .do(onNext: { [timestampFormatter] isHidden in
+            // log the event
+            print("\(timestampFormatter.string(from: Date())): Circle is hidden: \(isHidden)")
         })
 
         // MARK: AR Face Tracking
@@ -66,14 +63,13 @@ class ViewModel {
                 }
             }
             return nil
-        }.do(onNext: { [timestampFormatter] faceAnchor in
-            if faceAnchor != nil {
-                // log the event
-                print("\(timestampFormatter.string(from: Date())): Face detected")
-            }
+        }.compactMap { $0 }
+        .do(onNext: { [timestampFormatter] faceAnchor in
+            // log the event
+            print("\(timestampFormatter.string(from: Date())): Face detected with transform \(faceAnchor.transform.debugDescription)")
         })
 
-        currentLookAtPoint = faceAnchorObservable.map { $0?.lookAtPoint }
+        currentFaceTransform = faceAnchorObservable.map { $0.transform }
 
         // MARK: CoreMotion
 
@@ -82,7 +78,7 @@ class ViewModel {
             guard error == nil,
                     let data = data else
             { return }
-            print("\(timestampFormatter.string(from: Date())): Face detected")
+            print("\(timestampFormatter.string(from: Date())): Accelerometer update")
             self?.accelerationRelay.onNext(data.acceleration) // wrap accelerometer updates in rx
         }
     }
